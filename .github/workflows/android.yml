@@ -16,7 +16,8 @@ jobs:
         run: |
           sudo apt update
           sudo apt install -y openjdk-17-jdk unzip zip wget
-
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          export PATH=$JAVA_HOME/bin:$PATH
           export ANDROID_HOME=$HOME/android-sdk
           export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
 
