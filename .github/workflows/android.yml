@@ -5,46 +5,46 @@ on:
     branches: [ "main" ]
 
 jobs:
-    build:
-      runs-on: ubuntu-22.04
+  build:
+    runs-on: ubuntu-22.04
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Install Android SDK and accept licenses
-      run: |
-     sudo apt update
-     sudo apt install -y openjdk-17-jdk unzip zip
+      - name: Install Android SDK and accept licenses
+        run: |
+          sudo apt update
+          sudo apt install -y openjdk-17-jdk unzip zip wget
 
-     export ANDROID_HOME=$HOME/android-sdk
-     export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
+          export ANDROID_HOME=$HOME/android-sdk
+          export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
 
-     mkdir -p $ANDROID_HOME/cmdline-tools
-     cd $ANDROID_HOME/cmdline-tools
+          mkdir -p $ANDROID_HOME/cmdline-tools
+          cd $ANDROID_HOME/cmdline-tools
 
-     wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-     unzip commandlinetools-linux-*.zip
-     mv cmdline-tools latest
+          wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip commandlinetools-linux-*.zip
+          mv cmdline-tools latest
 
-     yes | sdkmanager --licenses
+          yes | sdkmanager --licenses
 
-     sdkmanager \
-      "platform-tools" \
-      "platforms;android-33" \
-      "build-tools;33.0.2"
-    
-    - name: Install buildozer
-      run: |
-        pip install --upgrade pip
-        pip install buildozer cython
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-33" \
+            "build-tools;33.0.2"
 
-    - name: Build APK
-      run: |
-        buildozer android debug
+      - name: Install buildozer
+        run: |
+          pip install --upgrade pip
+          pip install buildozer cython
 
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: RadioPlayer-APK
-        path: bin/*.apk
+      - name: Build APK
+        run: |
+          buildozer android debug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: RadioPlayer-APK
+          path: bin/*.apk
