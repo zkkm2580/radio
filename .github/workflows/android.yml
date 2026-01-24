@@ -42,30 +42,30 @@ jobs:
             ${{ runner.os }}-android-sdk
 
       # 5️⃣ 安装 Android SDK
-       - name: Install Android SDK
-  run: |
-    sudo apt update
-    sudo apt install -y openjdk-17-jdk unzip zip wget
+      - name: Install Android SDK
+        run: |
+          sudo apt update
+          sudo apt install -y openjdk-17-jdk unzip zip wget
 
-    # 强制使用 Java 17
-    export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-    export PATH=$JAVA_HOME/bin:$PATH
+     # 强制使用 Java 17
+       export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+       export PATH=$JAVA_HOME/bin:$PATH
 
-    export ANDROID_HOME=$HOME/android-sdk
-    export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
+       export ANDROID_HOME=$HOME/android-sdk
+       export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
 
-    mkdir -p $ANDROID_HOME/cmdline-tools
-    cd $ANDROID_HOME/cmdline-tools
+       mkdir -p $ANDROID_HOME/cmdline-tools
+       cd $ANDROID_HOME/cmdline-tools
 
-    wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-    unzip commandlinetools-linux-*.zip
-    mv cmdline-tools latest
+       wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+       unzip commandlinetools-linux-*.zip
+       mv cmdline-tools latest
 
     # 接受 SDK 许可
-    mkdir -p $ANDROID_HOME/licenses
-    echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > $ANDROID_HOME/licenses/android-sdk-license
+       mkdir -p $ANDROID_HOME/licenses
+       echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > $ANDROID_HOME/licenses/android-sdk-license
 
-    sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+       sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-33" "build-tools;33.0.2"
 
       # 6️⃣ 缓存 Buildozer 和 Cython
       - name: Cache Buildozer
