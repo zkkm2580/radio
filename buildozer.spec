@@ -3,10 +3,9 @@ title = RadioPlayer
 package.name = radioplayer
 package.domain = org.example
 source.dir = .
-source.include_exts = py,kv,txt,png,jpg
-# 使用刚才创建的 requirements.txt
-requirements.source_exts = requirements.txt
 
+# 增加了 liblzma 以解决 lzma.h 缺失，增加了 python3 编译时需要的底层支持
+requirements = python3, kivy==2.3.0, ffpyplayer, certifi, libffi, openssl, liblzma
 version = 0.1
 orientation = landscape
 fullscreen = 1
@@ -31,3 +30,4 @@ android.skip_update = False
 [buildozer]
 log_level = 2
 warn_on_root = 1
+
