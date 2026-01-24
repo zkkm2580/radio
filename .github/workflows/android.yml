@@ -9,88 +9,65 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      # 1️⃣ 检出代码
+      # 1. 检出代码
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2️⃣ 缓存 pip 包，加速 Buildozer 安装
-      - name: Cache pip
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      # 3️⃣ 安装系统依赖
+      # 2. 安装系统依赖
       - name: Install system dependencies
         run: |
           sudo apt update
-          sudo apt install -y openjdk-17-jdk unzip zip wget python3-pip python3-venv build-essential
+          sudo apt install -y openjdk-17-jdk unzip zip wget python3-pip python3-venv build-essential libffi-dev libssl-dev
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
+          echo "PATH=/usr/lib/jvm/java-17-openjdk-amd64/bin:$PATH" >> $GITHUB_ENV
 
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          export PATH=$JAVA_HOME/bin:$PATH
-
-      # 4️⃣ 缓存 Android SDK
-      - name: Cache Android SDK
-        uses: actions/cache@v3
-        with:
-          path: $HOME/android-sdk
-          key: ${{ runner.os }}-android-sdk
-          restore-keys: |
-            ${{ runner.os }}-android-sdk
-
-      # 5️⃣ 安装 Android SDK + build-tools
+      # 3. 安装 Android SDK 并自动接受协议
       - name: Install Android SDK
         run: |
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          export PATH=$JAVA_HOME/bin:$PATH
-
+          mkdir -p $HOME/android-sdk/cmdline-tools
+          cd $HOME/android-sdk/cmdline-tools
+          
+          # 下载最新的命令行工具
+          wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -q
+          unzip -q commandlinetools-linux-*.zip
+          mv cmdline-tools latest
+          
           export ANDROID_HOME=$HOME/android-sdk
           export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
-
-          mkdir -p $ANDROID_HOME/cmdline-tools
-          cd $ANDROID_HOME/cmdline-tools
-
-          # 下载命令行工具（最新稳定版本）
-          if [ ! -d "latest" ]; then
-            wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-            unzip commandlinetools-linux-*.zip
-            mv cmdline-tools latest
-          fi
-
-          # 创建 license 文件，非交互式接受许可
-          mkdir -p $ANDROID_HOME/licenses
-          echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > $ANDROID_HOME/licenses/android-sdk-license
-
-          # 安装平台和 build-tools（固定 33.0.2）
+          
+          # 【关键步】自动接受所有 License
+          yes | sdkmanager --licenses --sdk_root=$ANDROID_HOME
+          
+          # 预装必要的构建工具
           sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-33" "build-tools;33.0.2"
+          
+          # 写入环境变量到 GITHUB_ENV 供后续步骤使用
+          echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "PATH=$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools:$PATH" >> $GITHUB_ENV
 
-      # 6️⃣ 安装 Buildozer
+      # 4. 安装 Buildozer 和 Cython
       - name: Install Buildozer
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install buildozer cython
 
-      # 7️⃣ 清理旧 build-tools（第一次构建可安全执行）
-      - name: Remove old build-tools
-        run: |
-          rm -rf $HOME/.buildozer/android/platform/android-sdk/build-tools/*
-
-      # 8️⃣ 构建 APK
+      # 5. 构建 APK
       - name: Build APK
         run: |
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          export PATH=$JAVA_HOME/bin:$PATH
+          # 强制指定 Buildozer 使用我们之前配置好的 SDK 路径
+          export ANDROID_SDK_HOME=$ANDROID_HOME
+          
+          # 使用 yes 绕过 Buildozer 内部可能的二次确认
+          # 如果 buildozer.spec 中有配置，它会自动使用这些路径
+          yes | buildozer android debug
+        env:
+          # 某些环境下 Buildozer 需要手动指定这些环境变量
+          APP_ANDROID_SDK: ${{ env.ANDROID_HOME }}
+          APP_ANDROID_ACCEPT_SDK_LICENSE: "1"
 
-          export ANDROID_HOME=$HOME/android-sdk
-          export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
-
-          buildozer android debug
-
-      # 9️⃣ 上传 APK
+      # 6. 上传 APK 产物
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: RadioPlayer-APK
+          name: MyRadioPlayer-Debug
           path: bin/*.apk
