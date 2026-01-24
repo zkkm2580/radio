@@ -12,11 +12,28 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Install system deps
+    - name: Install Android SDK and accept licenses
       run: |
-        sudo apt update
-        sudo apt install -y python3 python3-pip git openjdk-17-jdk
+     sudo apt update
+     sudo apt install -y openjdk-17-jdk unzip zip
 
+     export ANDROID_HOME=$HOME/android-sdk
+     export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
+
+     mkdir -p $ANDROID_HOME/cmdline-tools
+     cd $ANDROID_HOME/cmdline-tools
+
+     wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+     unzip commandlinetools-linux-*.zip
+     mv cmdline-tools latest
+
+     yes | sdkmanager --licenses
+
+     sdkmanager \
+      "platform-tools" \
+      "platforms;android-33" \
+      "build-tools;33.0.2"
+    
     - name: Install buildozer
       run: |
         pip install --upgrade pip
