@@ -9,25 +9,26 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      # 1. 检出代码
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. 安装系统依赖
+      # 1. 安装系统依赖 (包含编译 ffpyplayer 的底层库)
       - name: Install system dependencies
         run: |
           sudo apt update
-          sudo apt install -y openjdk-17-jdk unzip zip wget python3-pip python3-venv build-essential libffi-dev libssl-dev
-          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
-          echo "PATH=/usr/lib/jvm/java-17-openjdk-amd64/bin:$PATH" >> $GITHUB_ENV
+          sudo apt install -y \
+            openjdk-17-jdk unzip zip wget build-essential \
+            python3-pip python3-venv python3-dev \
+            libffi-dev libssl-dev libltdl-dev \
+            libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
+            libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev \
+            zlib1g-dev cmake autoconf automake libtool
 
-      # 3. 安装 Android SDK 并自动接受协议
+      # 2. 安装 Android SDK 并强制授权
       - name: Install Android SDK
         run: |
           mkdir -p $HOME/android-sdk/cmdline-tools
           cd $HOME/android-sdk/cmdline-tools
-          
-          # 下载最新的命令行工具
           wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -q
           unzip -q commandlinetools-linux-*.zip
           mv cmdline-tools latest
@@ -35,39 +36,40 @@ jobs:
           export ANDROID_HOME=$HOME/android-sdk
           export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
           
-          # 【关键步】自动接受所有 License
+          # 自动接受所有 License
           yes | sdkmanager --licenses --sdk_root=$ANDROID_HOME
           
-          # 预装必要的构建工具
+          # 预装核心组件
           sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-33" "build-tools;33.0.2"
           
-          # 写入环境变量到 GITHUB_ENV 供后续步骤使用
           echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
-          echo "PATH=$HOME/android-sdk/cmdline-tools/latest/bin:$HOME/android-sdk/platform-tools:$PATH" >> $GITHUB_ENV
+          echo "JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64" >> $GITHUB_ENV
 
-      # 4. 安装 Buildozer 和 Cython
+      # 3. 安装构建工具
       - name: Install Buildozer
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install buildozer cython
 
-      # 5. 构建 APK
+      # 4. 强制路径映射并构建
       - name: Build APK
         run: |
-          # 强制指定 Buildozer 使用我们之前配置好的 SDK 路径
-          export ANDROID_SDK_HOME=$ANDROID_HOME
+          # 核心技巧：创建 Buildozer 预期的路径并软链接到我们安装的 SDK
+          mkdir -p $HOME/.buildozer/android/platform
+          ln -sf $ANDROID_HOME $HOME/.buildozer/android/platform/android-sdk
           
-          # 使用 yes 绕过 Buildozer 内部可能的二次确认
-          # 如果 buildozer.spec 中有配置，它会自动使用这些路径
-          yes | buildozer android debug
+          export PATH=$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$PATH
+          
+          # 运行构建
+          buildozer android debug
         env:
-          # 某些环境下 Buildozer 需要手动指定这些环境变量
-          APP_ANDROID_SDK: ${{ env.ANDROID_HOME }}
+          # 额外保险：通过环境变量传递路径
+          APP_ANDROID_SDK: /home/runner/android-sdk
           APP_ANDROID_ACCEPT_SDK_LICENSE: "1"
 
-      # 6. 上传 APK 产物
+      # 5. 上传 APK
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MyRadioPlayer-Debug
+          name: RadioPlayer-Package
           path: bin/*.apk
