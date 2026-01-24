@@ -26,7 +26,6 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt update
-          # 补充了编译 ffpyplayer 和底层多媒体库所需的所有包
           sudo apt install -y \
             openjdk-17-jdk unzip zip wget build-essential \
             python3-pip python3-venv python3-dev \
@@ -34,7 +33,8 @@ jobs:
             libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
             libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev \
             libsqlite3-dev zlib1g-dev cmake autoconf automake libtool \
-            pkg-config libasound2-dev libpulse-dev
+            pkg-config libasound2-dev libpulse-dev \
+            uuid-dev liblzma-dev  # <--- 重点增加这两个
          
 
       # 3. 安装系统依赖 (精简版，专注底层库)
@@ -82,14 +82,14 @@ jobs:
       # 4. 强制路径映射并构建
       - name: Build APK
         run: |
-          # 核心技巧：创建 Buildozer 预期的路径并软链接到我们安装的 SDK
           mkdir -p $HOME/.buildozer/android/platform
           ln -sf $ANDROID_HOME $HOME/.buildozer/android/platform/android-sdk
           
-          export PATH=$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$PATH
+          # 必须先彻底清理，否则它会跳过刚才修改的 requirements 重新报错
+          buildozer android clean
           
-          # 运行构建
-          buildozer android debug
+          # 使用 -v 查看实时进度
+          buildozer -v android debug
         env:
           # 额外保险：通过环境变量传递路径
           APP_ANDROID_SDK: /home/runner/android-sdk
