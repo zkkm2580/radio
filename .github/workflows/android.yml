@@ -47,12 +47,10 @@ jobs:
             libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev \
             zlib1g-dev cmake autoconf automake libtool
 
-      # 2. 安装 Android SDK 并强制授权
+     
+      # 3. 安装 Android SDK (修复路径兼容性)
       - name: Install Android SDK
         run: |
-          # 检查 Java 版本确认是否生效 (可选调试)
-          java -version 
-          
           mkdir -p $HOME/android-sdk/cmdline-tools
           cd $HOME/android-sdk/cmdline-tools
           wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -q
@@ -60,14 +58,19 @@ jobs:
           mv cmdline-tools latest
           
           export ANDROID_HOME=$HOME/android-sdk
+          
+          # 【核心修复】：兼容旧版 Buildozer 的路径预期
+          # 创建 tools/bin 目录并将 sdkmanager 链接过去
+          mkdir -p $ANDROID_HOME/tools/bin
+          ln -sf $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager $ANDROID_HOME/tools/bin/sdkmanager
+          ln -sf $ANDROID_HOME/cmdline-tools/latest/bin/avdmanager $ANDROID_HOME/tools/bin/avdmanager
+
           export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
           
-          # 现在这里运行就不会报 UnsupportedClassVersionError 了
           yes | sdkmanager --licenses --sdk_root=$ANDROID_HOME
           sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-33" "build-tools;33.0.2"
           
           echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
-
       # 3. 安装构建工具
       - name: Install Buildozer
         run: |
