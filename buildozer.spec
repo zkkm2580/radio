@@ -16,10 +16,11 @@ android.permissions = INTERNET
 # 停止手动指定路径，让 Buildozer 自动下载到默认位置
 # android.sdk_path = (这行删掉或注释掉)
 
-android.api = 33
+android.api = 31
 android.minapi = 21
-android.ndk = 25b
-android.build_tools_version = 33.0.2
+android.sdk = 31
+android.ndk = 23b
+android.build_tools_version = 31.0.0
 android.accept_sdk_license = True
 android.archs = arm64-v8a
 
