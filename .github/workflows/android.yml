@@ -39,18 +39,22 @@ jobs:
           python3 -m pip install "Cython<3.0" buildozer
 
       # 5. 执行正式构建
-      - name: Build APK
+            - name: Build APK
         run: |
-          # 彻底清理之前残留的冲突路径
-          rm -rf .buildozer
+          # 1. 预先接受所有协议 (使用 sdkmanager 路径)
+          export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
+          # 如果路径还没生成，先让 buildozer 跑一下初始化
+          buildozer android p4a -- --help > /dev/null 2>&1 || true
           
-          # 用 yes 命令自动应答所有安装提示，并开启详细日志 (-v)
-          yes | buildozer -v android debug
+          # 2. 强制授权 (双重保险)
+          mkdir -p $HOME/.android && touch $HOME/.android/repositories.cfg
+          yes | $HOME/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager --licenses || true
+
+          # 3. 正式构建，不带 yes | 以便看到真实的错误原因
+          buildozer -v android debug
         env:
-          # 允许在 GitHub 这种没有 root 权限的环境下运行
           BUILDOZER_ALLOW_KIVY_USER: 1
 
-      # 6. 将生成的 APK 文件存放到 Artifacts，方便下载
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
