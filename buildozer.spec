@@ -1,14 +1,30 @@
+[app]
 title = RadioPlayer
 package.name = radioplayer
-package.domain = org.car.radio
+package.domain = org.example
 
-source.include_exts = py,txt
+source.dir = .
+source.include_exts = py,kv,txt
 
-requirements = python3,kivy,pyjnius
+version = 0.1
 
-android.permissions = INTERNET,WAKE_LOCK,READ_EXTERNAL_STORAGE
-android.minapi = 21
-android.api = 33
+requirements = python3,kivy,ffpyplayer
 
 orientation = landscape
+
 fullscreen = 1
+
+android.permissions = INTERNET
+
+android.api = 33
+android.minapi = 21
+
+android.ndk = 25b
+
+android.archs = arm64-v8a,armeabi-v7a
+
+log_level = 2
+
+[buildozer]
+log_level = 2
+warn_on_root = 1
