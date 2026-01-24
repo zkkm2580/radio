@@ -22,7 +22,7 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: 'gradle'
+         
 
       # 3. 安装系统依赖 (精简版，专注底层库)
       - name: Install system dependencies
