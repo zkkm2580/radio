@@ -2,3 +2,4 @@ python3
 kivy==2.3.0
 ffpyplayer
 certifi
+pyjnius
