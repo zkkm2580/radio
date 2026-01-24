@@ -40,7 +40,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-android-sdk
 
-      # 5️⃣ 安装 Android SDK 和 build-tools
+      # 5️⃣ 安装 Android SDK + build-tools
       - name: Install Android SDK
         run: |
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
@@ -63,7 +63,7 @@ jobs:
           mkdir -p $ANDROID_HOME/licenses
           echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > $ANDROID_HOME/licenses/android-sdk-license
 
-          # 安装平台和 build-tools
+          # 安装平台和 build-tools（固定 33.0.2）
           sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-33" "build-tools;33.0.2"
 
       # 6️⃣ 安装 Buildozer
@@ -71,11 +71,13 @@ jobs:
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install buildozer cython
-      - name: Clean old Buildozer / SDK cache
+
+      # 7️⃣ 清理旧 build-tools（第一次构建可安全执行）
+      - name: Remove old build-tools
         run: |
-          buildozer android clean
-           rm -rf $HOME/.buildozer/android/platform/android-sdk/build-tools/*
-      # 7️⃣ 构建 APK
+          rm -rf $HOME/.buildozer/android/platform/android-sdk/build-tools/*
+
+      # 8️⃣ 构建 APK
       - name: Build APK
         run: |
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
@@ -86,7 +88,7 @@ jobs:
 
           buildozer android debug
 
-      # 8️⃣ 上传 APK
+      # 9️⃣ 上传 APK
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
