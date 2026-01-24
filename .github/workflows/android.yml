@@ -53,9 +53,9 @@ jobs:
           cd $ANDROID_HOME/cmdline-tools
 
           if [ ! -d "latest" ]; then
-            wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+            wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_33.0.2.zip
             unzip commandlinetools-linux-*.zip
-            mv cmdline-tools latest
+            mv cmdline-tools 33.0.2
           fi
 
           mkdir -p $ANDROID_HOME/licenses
