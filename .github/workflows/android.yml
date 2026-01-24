@@ -9,93 +9,48 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
+      # 1. 获取代码
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. 检出代码
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      # 2. 强制设置 Java 17 环境 (解决 ClassVersionError)
+      # 2. 设置正确的 Java 环境 (运行 sdkmanager 必须)
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
+      # 3. 安装 ffpyplayer 和 Kivy 编译所需的 Linux 系统库
       - name: Install system dependencies
         run: |
           sudo apt update
           sudo apt install -y \
-            openjdk-17-jdk unzip zip wget build-essential \
-            python3-pip python3-venv python3-dev \
+            python3-pip python3-setuptools python3-dev \
             libffi-dev libssl-dev libltdl-dev \
             libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
             libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev \
-            libsqlite3-dev zlib1g-dev cmake autoconf automake libtool \
-            pkg-config libasound2-dev libpulse-dev \
-            uuid-dev liblzma-dev  # <--- 重点增加这两个
-         
+            zlib1g-dev cmake autoconf automake libtool pkg-config \
+            uuid-dev liblzma-dev
 
-      # 3. 安装系统依赖 (精简版，专注底层库)
-      - name: Install system dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y \
-            unzip zip wget build-essential \
-            python3-pip python3-venv python3-dev \
-            libffi-dev libssl-dev libltdl-dev \
-            libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev \
-            libportmidi-dev libswscale-dev libavformat-dev libavcodec-dev \
-            zlib1g-dev cmake autoconf automake libtool
-
-     
-      # 3. 安装 Android SDK (修复路径兼容性)
-      - name: Install Android SDK
-        run: |
-          mkdir -p $HOME/android-sdk/cmdline-tools
-          cd $HOME/android-sdk/cmdline-tools
-          wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -q
-          unzip -q commandlinetools-linux-*.zip
-          mv cmdline-tools latest
-          
-          export ANDROID_HOME=$HOME/android-sdk
-          
-          # 【核心修复】：兼容旧版 Buildozer 的路径预期
-          # 创建 tools/bin 目录并将 sdkmanager 链接过去
-          mkdir -p $ANDROID_HOME/tools/bin
-          ln -sf $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager $ANDROID_HOME/tools/bin/sdkmanager
-          ln -sf $ANDROID_HOME/cmdline-tools/latest/bin/avdmanager $ANDROID_HOME/tools/bin/avdmanager
-
-          export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
-          
-          yes | sdkmanager --licenses --sdk_root=$ANDROID_HOME
-          sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-33" "build-tools;33.0.2"
-          
-          echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
-      # 3. 安装构建工具
-      - name: Install Buildozer
+      # 4. 安装构建工具，锁定 Cython 版本防止编译失败
+      - name: Install Buildozer and Cython
         run: |
           python3 -m pip install --upgrade pip
-          python3 -m pip install buildozer cython
+          python3 -m pip install "Cython<3.0" buildozer
 
-      # 4. 强制路径映射并构建
+      # 5. 执行正式构建
       - name: Build APK
         run: |
-          mkdir -p $HOME/.buildozer/android/platform
-          ln -sf $ANDROID_HOME $HOME/.buildozer/android/platform/android-sdk
+          # 彻底清理之前残留的冲突路径
+          rm -rf .buildozer
           
-          # 必须先彻底清理，否则它会跳过刚才修改的 requirements 重新报错
-          buildozer android clean
-          
-          # 使用 -v 查看实时进度
-          buildozer -v android debug
+          # 用 yes 命令自动应答所有安装提示，并开启详细日志 (-v)
+          yes | buildozer -v android debug
         env:
-          # 额外保险：通过环境变量传递路径
-          APP_ANDROID_SDK: /home/runner/android-sdk
-          APP_ANDROID_ACCEPT_SDK_LICENSE: "1"
+          # 允许在 GitHub 这种没有 root 权限的环境下运行
+          BUILDOZER_ALLOW_KIVY_USER: 1
 
-      # 5. 上传 APK
+      # 6. 将生成的 APK 文件存放到 Artifacts，方便下载
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
