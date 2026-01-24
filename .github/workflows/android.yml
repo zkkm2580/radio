@@ -13,7 +13,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2️⃣ 缓存 pip 包，加速 Buildozer 安装
+      # 2️⃣ 缓存 pip 包
       - name: Cache pip
         uses: actions/cache@v3
         with:
@@ -22,13 +22,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      # 3️⃣ 安装系统依赖：Java 17, unzip, zip, wget, python3-pip
+      # 3️⃣ 安装系统依赖
       - name: Install system dependencies
         run: |
           sudo apt update
           sudo apt install -y openjdk-17-jdk unzip zip wget python3-pip python3-venv build-essential
 
-          # 设置 Java 17
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
           export PATH=$JAVA_HOME/bin:$PATH
 
@@ -44,50 +43,44 @@ jobs:
       # 5️⃣ 安装 Android SDK
       - name: Install Android SDK
         run: |
-          sudo apt update
-          sudo apt install -y openjdk-17-jdk unzip zip wget
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          export PATH=$JAVA_HOME/bin:$PATH
 
-     # 强制使用 Java 17
-       export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-       export PATH=$JAVA_HOME/bin:$PATH
+          export ANDROID_HOME=$HOME/android-sdk
+          export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
 
-       export ANDROID_HOME=$HOME/android-sdk
-       export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
+          mkdir -p $ANDROID_HOME/cmdline-tools
+          cd $ANDROID_HOME/cmdline-tools
 
-       mkdir -p $ANDROID_HOME/cmdline-tools
-       cd $ANDROID_HOME/cmdline-tools
+          if [ ! -d "latest" ]; then
+            wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+            unzip commandlinetools-linux-*.zip
+            mv cmdline-tools latest
+          fi
 
-       wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-       unzip commandlinetools-linux-*.zip
-       mv cmdline-tools latest
+          mkdir -p $ANDROID_HOME/licenses
+          echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > $ANDROID_HOME/licenses/android-sdk-license
 
-    # 接受 SDK 许可
-       mkdir -p $ANDROID_HOME/licenses
-       echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > $ANDROID_HOME/licenses/android-sdk-license
+          sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-33" "build-tools;33.0.2"
 
-       sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-33" "build-tools;33.0.2"
-
-      # 6️⃣ 缓存 Buildozer 和 Cython
-      - name: Cache Buildozer
-        uses: actions/cache@v3
-        with:
-          path: ~/.local/lib/python3.*/site-packages
-          key: ${{ runner.os }}-buildozer
-
-      # 7️⃣ 安装 Buildozer
+      # 6️⃣ 安装 Buildozer 和 Cython
       - name: Install Buildozer
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install buildozer cython
 
-      # 8️⃣ 构建 APK
+      # 7️⃣ 构建 APK
       - name: Build APK
         run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          export PATH=$JAVA_HOME/bin:$PATH
+
           export ANDROID_HOME=$HOME/android-sdk
           export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
+
           buildozer android debug
 
-      # 9️⃣ 上传 APK
+      # 8️⃣ 上传 APK
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
