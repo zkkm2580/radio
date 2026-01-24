@@ -9,11 +9,11 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      # 1️⃣ 检出仓库
+      # 1️⃣ 检出代码
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2️⃣ 缓存 pip 包
+      # 2️⃣ 缓存 pip 包，加速 Buildozer 安装
       - name: Cache pip
         uses: actions/cache@v3
         with:
@@ -40,7 +40,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-android-sdk
 
-      # 5️⃣ 安装 Android SDK
+      # 5️⃣ 安装 Android SDK 和 build-tools
       - name: Install Android SDK
         run: |
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
@@ -52,18 +52,21 @@ jobs:
           mkdir -p $ANDROID_HOME/cmdline-tools
           cd $ANDROID_HOME/cmdline-tools
 
+          # 下载命令行工具（最新稳定版本）
           if [ ! -d "latest" ]; then
-            wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_33.0.2.zip
+            wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
             unzip commandlinetools-linux-*.zip
-            mv cmdline-tools 33.0.2
+            mv cmdline-tools latest
           fi
 
+          # 创建 license 文件，非交互式接受许可
           mkdir -p $ANDROID_HOME/licenses
           echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > $ANDROID_HOME/licenses/android-sdk-license
 
+          # 安装平台和 build-tools
           sdkmanager --sdk_root=$ANDROID_HOME "platform-tools" "platforms;android-33" "build-tools;33.0.2"
 
-      # 6️⃣ 安装 Buildozer 和 Cython
+      # 6️⃣ 安装 Buildozer
       - name: Install Buildozer
         run: |
           python3 -m pip install --upgrade pip
