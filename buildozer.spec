@@ -15,6 +15,8 @@ orientation = landscape
 fullscreen = 1
 
 android.permissions = INTERNET
+# Android SDK Build Tools version
+android.build_tools_version = 33.0.2
 
 android.api = 33
 android.minapi = 21
@@ -28,3 +30,4 @@ log_level = 2
 [buildozer]
 log_level = 2
 warn_on_root = 1
+
