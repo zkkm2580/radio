@@ -3,8 +3,7 @@ title = RadioPlayer
 package.name = radioplayer
 package.domain = org.example
 source.dir = .
-source.include_exts = py,kv,txt,png,jpg
-
+source.include_exts = py,kv,txt,png
 # 核心修改：增加 liblzma 解决压缩库缺失，增加 pyjnius 解决 C 源码生成问题
 requirements = python3, kivy==2.3.0, ffpyplayer, certifi, openssl, libffi, liblzma, pyjnius
 
