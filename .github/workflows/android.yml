@@ -56,3 +56,12 @@ jobs:
         with:
           name: RadioPlayer-Package
           path: bin/*.apk
+           # 7. 创建 Release 并上传文件
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') # 仅在推送标签(Tag)时触发
+        with:
+          files: bin/*.apk
+          body: "RadioPlayer 自动构建版本"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
