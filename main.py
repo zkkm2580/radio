@@ -8,6 +8,13 @@ from kivy.uix.scrollview import ScrollView
 from jnius import autoclass
 
 MediaPlayer = autoclass('android.media.MediaPlayer')
+from kivy.core.text import LabelBase
+
+# 注册字体（假设你的字体文件叫 font.ttf）
+LabelBase.register(name='Chinese', fn_regular='font.ttf')
+
+# 在你的 UI 布局（如 Label 或 Button）中指定 font_name
+# label = Label(text='直播源', font_name='Chinese')
 
 PLAYLIST_FILE = 'playlist.txt'
 
