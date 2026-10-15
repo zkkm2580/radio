@@ -3,13 +3,13 @@ title = RadioPlayer
 package.name = radioplayer
 package.domain = org.example
 source.dir = .
-source.include_exts = py,kv,txt,png
-requirements = python3, kivy==2.3.0, ffpyplayer, certifi, openssl, libffi, liblzma, pyjnius
+source.include_exts = py,kv,txt,png,ttf
+requirements = python3, kivy==2.3.0, certifi, openssl, libffi, liblzma, pyjnius
 
 version = 0.1
 orientation = landscape
 fullscreen = 1
-android.permissions = INTERNET
+android.permissions = INTERNET, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE
 
 # 升级到 API 33 和 NDK 25b
 android.api = 33
