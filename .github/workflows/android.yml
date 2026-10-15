@@ -3,10 +3,15 @@ name: Build Android APK
 on:
   push:
     branches: [ "main" ]
+  schedule:
+    - cron: '0 20 * * *' # UTC 20:00 即北京时间 04:00
+  workflow_dispatch:      # 支持手动在网页点击触发构建
 
 jobs:
   build:
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write # 赋予上传 Release 权限
 
     steps:
       - name: Checkout code
@@ -21,7 +26,6 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          # gettext 包含 autopoint，是编译 liblzma 的核心依赖
           sudo apt-get install -y \
             python3-pip python3-setuptools python3-dev \
             libffi-dev libssl-dev libltdl-dev \
@@ -30,7 +34,6 @@ jobs:
             zlib1g-dev cmake autoconf automake libtool pkg-config \
             uuid-dev liblzma-dev gettext autopoint
 
-
       - name: Install Buildozer and Cython
         run: |
           python3 -m pip install --upgrade pip
@@ -38,30 +41,33 @@ jobs:
 
       - name: Build APK
         run: |
-          # 1. 预备环境
           export ANDROID_HOME=$HOME/.buildozer/android/platform/android-sdk
           buildozer android p4a -- --help > /dev/null 2>&1 || true
-          
-          # 2. 接受 SDK 许可协议
           mkdir -p $HOME/.android && touch $HOME/.android/repositories.cfg
           yes | $HOME/.buildozer/android/platform/android-sdk/tools/bin/sdkmanager --licenses || true
 
-          # 3. 开始构建 (由于包含 ffpyplayer，此过程较慢)
           buildozer -v android debug
         env:
           BUILDOZER_ALLOW_KIVY_USER: 1
 
-      - name: Upload APK
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: RadioPlayer-Package
           path: bin/*.apk
-           # 7. 创建 Release 并上传文件
+
+      - name: Generate Release Tag
+        id: tag
+        run: |
+          echo "release_tag=v$(date -u -d '+8 hours' +'%Y.%m.%d-%H%M')" >> $GITHUB_OUTPUT
+          echo "release_date=$(date -u -d '+8 hours' +'%Y-%m-%d %H:%M')" >> $GITHUB_OUTPUT
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/') # 仅在推送标签(Tag)时触发
         with:
+          tag_name: ${{ steps.tag.outputs.release_tag }}
+          name: "RadioPlayer 自动构建 (${{ steps.tag.outputs.release_date }})"
           files: bin/*.apk
-          body: "RadioPlayer 自动构建版本"
+          body: "RadioPlayer 每日定时构建版本，可直接下载 APK 安装测试。"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
