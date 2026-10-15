@@ -4,25 +4,29 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.textinput import TextInput
 from kivy.uix.button import Button
 from kivy.uix.scrollview import ScrollView
-
-from jnius import autoclass
-
-MediaPlayer = autoclass('android.media.MediaPlayer')
 from kivy.core.text import LabelBase
+from kivy.utils import platform
 
-# 注册字体（假设你的字体文件叫 font.ttf）
-LabelBase.register(name='Chinese', fn_regular='font.ttf')
+# 1. 字体安全加载：优先加载本地 font.ttf，找不到则回退到系统字体，避免崩溃
+font_path = 'font.ttf'
+if not os.path.exists(font_path) and platform == 'android':
+    for sys_font in ['/system/fonts/NotoSansSC-Regular.otf', '/system/fonts/DroidSansFallback.ttf']:
+        if os.path.exists(sys_font):
+            font_path = sys_font
+            break
 
-# 在你的 UI 布局（如 Label 或 Button）中指定 font_name
-# label = Label(text='直播源', font_name='Chinese')
-
-PLAYLIST_FILE = 'playlist.txt'
+if os.path.exists(font_path):
+    LabelBase.register(name='Chinese', fn_regular=font_path)
+    DEFAULT_FONT = 'Chinese'
+else:
+    DEFAULT_FONT = None
 
 
 class RadioPlayer(App):
 
     def build(self):
-        self.player = MediaPlayer()
+        # 初始化播放器
+        self.init_player()
 
         root = BoxLayout(orientation='vertical')
 
@@ -31,15 +35,16 @@ class RadioPlayer(App):
             size_hint_y=None,
             height=80,
             font_size=26,
+            font_name=DEFAULT_FONT if DEFAULT_FONT else None,
             multiline=False
         )
 
         btn_bar = BoxLayout(size_hint_y=None, height=80)
 
-        btn_add = Button(text='添加', font_size=26)
+        btn_add = Button(text='添加', font_size=26, font_name=DEFAULT_FONT if DEFAULT_FONT else None)
         btn_add.bind(on_press=self.add_url)
 
-        btn_import = Button(text='导入 M3U', font_size=26)
+        btn_import = Button(text='导入 M3U', font_size=26, font_name=DEFAULT_FONT if DEFAULT_FONT else None)
         btn_import.bind(on_press=self.import_m3u)
 
         btn_bar.add_widget(btn_add)
@@ -58,17 +63,44 @@ class RadioPlayer(App):
         self.load_playlist()
         return root
 
-    # 播放
-    def play(self, url):
-        try:
-            self.player.reset()
-            self.player.setDataSource(url)
-            self.player.prepareAsync()
-            self.player.setOnPreparedListener(lambda mp: mp.start())
-        except Exception as e:
-            print(e)
+    def get_playlist_path(self):
+        # 使用安全的 App 私有存储目录
+        return os.path.join(self.user_data_dir, 'playlist.txt')
 
-    # 添加 URL
+    def init_player(self):
+        if platform == 'android':
+            from jnius import autoclass, PythonJavaClass, java_method
+            MediaPlayer = autoclass('android.media.MediaPlayer')
+            self.player = MediaPlayer()
+
+            class PreparedListener(PythonJavaClass):
+                __javainterfaces__ = ['android/media/MediaPlayer$OnPreparedListener']
+                __javacontext__ = 'app'
+
+                def __init__(self, start_callback):
+                    super(PreparedListener, self).__init__()
+                    self.start_callback = start_callback
+
+                @java_method('(Landroid/media/MediaPlayer;)V')
+                def onPrepared(self, mp):
+                    self.start_callback(mp)
+
+            self.prepared_listener = PreparedListener(lambda mp: mp.start())
+            self.player.setOnPreparedListener(self.prepared_listener)
+        else:
+            self.player = None
+
+    def play(self, url):
+        if platform == 'android' and self.player:
+            try:
+                self.player.reset()
+                self.player.setDataSource(url)
+                self.player.prepareAsync()
+            except Exception as e:
+                print(f"Playback error: {e}")
+        else:
+            print(f"[PC 预览模拟] 正在播放: {url}")
+
     def add_url(self, instance):
         url = self.input.text.strip()
         if url:
@@ -76,7 +108,6 @@ class RadioPlayer(App):
             self.save_url(url)
             self.input.text = ''
 
-    # UI 列表项
     def add_item(self, url):
         btn = Button(
             text=url,
@@ -87,22 +118,20 @@ class RadioPlayer(App):
         btn.bind(on_press=lambda x: self.play(url))
         self.list_box.add_widget(btn)
 
-    # 保存列表
     def save_url(self, url):
-        with open(PLAYLIST_FILE, 'a', encoding='utf-8') as f:
+        with open(self.get_playlist_path(), 'a', encoding='utf-8') as f:
             f.write(url + '\n')
 
-    # 加载列表
     def load_playlist(self):
-        if not os.path.exists(PLAYLIST_FILE):
+        path = self.get_playlist_path()
+        if not os.path.exists(path):
             return
-        with open(PLAYLIST_FILE, 'r', encoding='utf-8') as f:
+        with open(path, 'r', encoding='utf-8') as f:
             for line in f:
                 url = line.strip()
                 if url:
                     self.add_item(url)
 
-    # 导入 M3U（放在 /sdcard/playlist.m3u）
     def import_m3u(self, instance):
         path = '/sdcard/playlist.m3u'
         if not os.path.exists(path):
@@ -115,4 +144,5 @@ class RadioPlayer(App):
                     self.save_url(line)
 
 
-RadioPlayer().run()
+if __name__ == '__main__':
+    RadioPlayer().run()
