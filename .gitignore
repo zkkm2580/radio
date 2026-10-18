@@ -3,4 +3,3 @@ __pycache__/
 .buildozer/
 bin/
 .spec
-radio_http.txt
