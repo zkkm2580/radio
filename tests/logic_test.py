@@ -167,6 +167,58 @@ class KeyMappingTest(unittest.TestCase):
         self.assertIsNone(main.RadioPlayer._resolve_key(5, None, None))
 
 
+class PlayAttemptTest(unittest.TestCase):
+
+    """播放线路重试：这是车机上「点了没反应」的主要兜底手段。"""
+
+    def test_https_first_then_http_fallback(self):
+        attempts = main.RadioPlayer._url_attempts(
+            'https://live.ximalaya.com/radio-first-page-app/live/764/64.m3u8')
+        urls = [u for u, _h in attempts]
+        self.assertEqual(urls[0],
+                         'https://live.ximalaya.com/radio-first-page-app/live/764/64.m3u8')
+        self.assertIn('http://live.ximalaya.com/radio-first-page-app/live/764/64.m3u8',
+                      urls)
+
+    def test_http_gains_https_variant(self):
+        attempts = main.RadioPlayer._url_attempts('http://a.cn/x.m3u8')
+        self.assertIn('https://a.cn/x.m3u8', [u for u, _h in attempts])
+
+    def test_each_url_tried_with_and_without_headers(self):
+        attempts = main.RadioPlayer._url_attempts('https://a.cn/x.m3u8')
+        self.assertEqual(len(attempts), 4)
+        for url in ('https://a.cn/x.m3u8', 'http://a.cn/x.m3u8'):
+            flags = sorted(h for u, h in attempts if u == url)
+            self.assertEqual(flags, [False, True])   # 先带头再裸连
+
+    def test_non_http_url_has_single_attempt(self):
+        attempts = main.RadioPlayer._url_attempts('rtsp://a.cn/live')
+        self.assertEqual([u for u, _h in attempts], ['rtsp://a.cn/live'])
+
+    def test_remembered_route_is_tried_first(self):
+        app = main.RadioPlayer()
+        url = 'https://a.cn/x.m3u8'
+        app.good_sources = {url: ('http://a.cn/x.m3u8', True)}
+        ordered = app._ordered_attempts(url)
+        self.assertEqual(ordered[0], ('http://a.cn/x.m3u8', True))
+        # 原线路仍要保留在后面，万一备用线路哪天也失效
+        self.assertIn((url, True), ordered[1:])
+        self.assertEqual(len(ordered), 4)
+
+    def test_without_memory_order_is_unchanged(self):
+        app = main.RadioPlayer()
+        app.good_sources = {}
+        ordered = app._ordered_attempts('https://a.cn/x.m3u8')
+        self.assertEqual(ordered, main.RadioPlayer._url_attempts(
+            'https://a.cn/x.m3u8'))
+
+    def test_error_text_is_human_readable(self):
+        self.assertIn('网络', main.describe_error(-1004, -1004))
+        self.assertIn('不支持', main.describe_error(-1010, None))
+        self.assertEqual(main.describe_error(None, None), '')
+        self.assertIn('code=', main.describe_error(99999, None))  # 未知码不丢信息
+
+
 class SelectionTest(unittest.TestCase):
 
     def setUp(self):
